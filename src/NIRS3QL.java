@@ -2,9 +2,11 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.Timer;
+import javax.swing.border.LineBorder;
 
 import java.io.*;
 import java.util.*;
+import java.util.List;
 
 import org.jfree.chart.*;
 import org.jfree.chart.axis.*;
@@ -19,12 +21,66 @@ public class NIRS3QL extends JFrame implements ActionListener {
 	private ArrayList<String[]> list = new ArrayList<String[]>();
 	private final DefaultXYDataset dataset = new DefaultXYDataset();
 	private JLabel[] labels;
-	private JFrame cf;
 	Timer timer;
+	private boolean isOpened;
+
+	private final String[][] ITEMS = {
+			{"1", "SRL_CNT"},
+			{"2", "RPL_TIME"},
+			{"3", "OBS_TIME32"},
+			{"4", "OBS_TIME6"},
+			{"5", "STACK"},
+			{"7", "OBS_MODE1"},
+			{"8", "OBS_MODE2"},
+			{"9", "OBS_MODE3"},
+			{"6", "CMD_CNT"},
+			{"10", "CMD_ERR"},
+			{"48", "SEND_PCKT_CNT"},
+			{"47", "RJCT_PCKT_CNT"},
+			{"12", "BUF_STAT"},
+			{"11", "MEM_ERR"},
+			{"41", "PRAMP_SNSR_CUR"},
+			{"15", "HTR_PWR_COMM"},
+			{"20", "HTR_PWR_REAL"},
+			{"23", "HTR_SET_VAL"},
+			{"18", "HTR_MODE"},
+			{"36", "HTR_CUR"},
+			{"32", "OPT_TMP"},
+			{"34", "S_TMP"},
+			{"35", "AE_TMP"},
+			{"26", "INTEG_TRIG"},
+			{"29", "INTEG_TIME"},
+			{"27", "STK_MINMAX_OUT"},
+			{"28", "STK_VAR_OUT"},
+			{"30", "STK_INDEX"},
+			{"14", "CHP_STAT"},
+			{"31", "CHP_FREQ"},
+			{"39", "CHP_CUR"},
+			{"40", "CHP_AMP"},
+			{"13", "CHP_PWR_COMM"},
+			{"19", "CHP_PWR_REAL"},
+			{"25", "SNSR_GAIN"},
+			{"33", "SNSR_TMP"},
+			{"42", "SNSR_CH20"},
+			{"43", "SNSR_CH40"},
+			{"44", "SNSR_CH60"},
+			{"45", "SNSR_CH80"},
+			{"46", "SNSR_CH100"},
+			{"16", "RADLMP_PWR_COMM"},
+			{"21", "RADLMP_PWR_REAL"},
+			{"24", "RADLMP_GAIN"},
+			{"37", "RADLMP_CUR"},
+			{"17", "WAVLMP_PWR_COMM"},
+			{"22", "WAVLMP_PWR_REAL"},
+			{"38", "WAVLMP_CUR"}
+	};
+
+	private List power = new ArrayList();
 
 	public NIRS3QL(String title) {
 		super(title);
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		this.getContentPane().setBackground(new Color(77, 77, 77));
 
 		timer = new Timer(500, this);
 		timer.setActionCommand("timer");
@@ -34,6 +90,8 @@ public class NIRS3QL extends JFrame implements ActionListener {
 
 		JPanel lp = createLabelPanel();
 		lp.setPreferredSize(new Dimension(950, 240));
+		lp.setBorder(new LineBorder(Color.white, 2, true));
+		lp.setOpaque(false);
 		this.add(lp);
 
 		double[][] series = new double[2][128];
@@ -45,10 +103,16 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		JFreeChart chart = createChart(dataset);
 		ChartPanel cp = new ChartPanel(chart, false);
 		cp.setPreferredSize(new Dimension(950, 320));
+		cp.setOpaque(false);
 		this.add(cp);
 
-		cf = createControllerFrame();
+
+		JPanel bp = createButtonPanel();
+		bp.setPreferredSize(new Dimension(950, 140));
+		bp.setOpaque(false);
+		this.add(bp);
 	}
+
 
 	public void actionPerformed(ActionEvent e) {
 		if (e.getSource() == timer) {
@@ -79,28 +143,18 @@ public class NIRS3QL extends JFrame implements ActionListener {
 			}
 		});
 
-		JMenu menuView = new JMenu("View");
-		menuBar.add(menuView);
-
-		JMenuItem menuShow = new JMenuItem("Show Controller");
-		menuView.add(menuShow);
-		menuShow.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				cf.setVisible(true);
-			}
-		});
-
 		return menuBar;
 	}
 
 	private JPanel createLabelPanel() {
 		JPanel panel = new JPanel();
 		panel.setLayout(new GridLayout(12, 6));
-		labels = new JLabel[48];
-		for (int i = 0; i < 48; i++) {
+		labels = new JLabel[ITEMS.length];
+		for (int i = 0; i < ITEMS.length; i++) {
 			String[] item = getItem(i);
 			labels[i] = new JLabel(item[1]);
 			labels[i].setFont(new Font("SansSerif", Font.PLAIN, 12));
+			labels[i].setForeground(Color.white);
 			panel.add(labels[i]);
 		}
 		return panel;
@@ -148,45 +202,32 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		return chart;
 	}
 
-	private JFrame createControllerFrame() {
-		JFrame frame = new JFrame("Controller");
+	private JPanel createButtonPanel() {
 		JPanel panel = new JPanel();
 
-		JButton backwardButton = new JButton("|<<");
-		backwardButton.setFont(new Font("SansSerif", Font.PLAIN, 12));
-		backwardButton.setPreferredSize(new Dimension(60, 30));
-		panel.add(backwardButton);
+		JButton backwardButton = createControllButton("|<<");
+		JButton stopButton = createControllButton("||");
+		JButton startButton = createControllButton(">>");
+		JButton forwardButton = createControllButton(">>|");
+
 		backwardButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				id--;
+				if (id > 1) {
+					id--;
+				}
 				update();
 			}
 		});
-		
-		JButton stopButton = new JButton("||");
-		stopButton.setFont(new Font("SansSerif", Font.PLAIN, 12));
-		stopButton.setPreferredSize(new Dimension(60, 30));
-		panel.add(stopButton);
 		stopButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				timer.stop();
-			}
+					timer.stop();
+				}
 		});
-
-		JButton startButton = new JButton(">>");
-		startButton.setFont(new Font("SansSerif", Font.PLAIN, 12));
-		startButton.setPreferredSize(new Dimension(60, 30));
-		panel.add(startButton);
 		startButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				timer.start();
-			}
+					timer.start();
+				}
 		});
-
-		JButton forwardButton = new JButton(">>|");
-		forwardButton.setFont(new Font("SansSerif", Font.PLAIN, 12));
-		forwardButton.setPreferredSize(new Dimension(60, 30));
-		panel.add(forwardButton);
 		forwardButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				id++;
@@ -194,13 +235,30 @@ public class NIRS3QL extends JFrame implements ActionListener {
 			}
 		});
 
-		frame.setSize(350, 80);
-		frame.add(panel, BorderLayout.CENTER);
-		frame.setVisible(false);
-		return frame;
+		panel.add(backwardButton);
+		panel.add(stopButton);
+		panel.add(startButton);
+		panel.add(forwardButton);
+
+		return panel;
 	}
 
-	public void readFile(File file) {
+	private JButton createControllButton(String string) {
+		JButton jb = new JButton(string);
+		jb.setFont(new Font("SansSerif", Font.PLAIN, 12));
+		jb.setPreferredSize(new Dimension(60, 30));
+
+		return jb;
+	}
+
+	private void showDialogFrame() {
+		JFrame frame = new JFrame();
+
+		frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
+		frame.setSize(200, 100);
+	}
+
+	private void readFile(File file) {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(file));
 			String line = null;
@@ -209,6 +267,7 @@ public class NIRS3QL extends JFrame implements ActionListener {
 				list.add(arrayLine);
 			}
 			br.close();
+			isOpened = true;
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -216,7 +275,7 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		}
 	}
 
-	public void openFile() {
+	private void openFile() {
 		JFileChooser fileChooser = new JFileChooser();
 
 		int selected = fileChooser.showOpenDialog(this);
@@ -227,87 +286,51 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		}
 	}
 
-	public void update() {
-		String[] data = list.get(id);
+	private void update() {
+		try {
+			System.out.println(id);
+			String[] data = list.get(id);
 
-		for (int i = 0; i < 48; i++) {
-			String[] item = getItem(i);
-			labels[i].setText(String.format("%-15s%9s", item[1], data[Integer.parseInt(item[0])-1]));
-		}
+			for (int i = 0; i < ITEMS.length; i++) {
+				String[] item = getItem(i);
+				labels[i].setText(String.format("%-15s%9s", item[1], data[Integer.parseInt(item[0]) - 1]));
+			}
 
-		dataset.removeSeries("s1");
-		double[][] series = new double[2][128];
-		for (int i = 0; i < 128; i++) {
-			double x = i + 1.0;
-			double y = Double.parseDouble(data[i + 48].trim());
-			if (y > 60000)
-				y -= 65536;
-			series[0][i] = x;
-			series[1][i] = y;
+			dataset.removeSeries("s1");
+			double[][] series = new double[2][128];
+			for (int i = 0; i < 128; i++) {
+				double x = i + 1.0;
+				double y = Double.parseDouble(data[i + ITEMS.length].trim());
+				if (y > 60000)
+					y -= 65536;
+				series[0][i] = x;
+				series[1][i] = y;
+			}
+			dataset.addSeries("s1", series);
+		} catch (IndexOutOfBoundsException e) {
+			JLabel label;
+			if (isOpened) {
+				label = new JLabel("NIRS3QL finished");
+				id--;
+			} else {
+				label = new JLabel("Plase open file");
+				id = 1;
+			}
+			label.setForeground(Color.RED);
+			JOptionPane.showMessageDialog(this, label);
+			timer.stop();
 		}
-		dataset.addSeries("s1", series);
 	}
 
-	public String[] getItem(int i) {
-		String[][] items = {
-				{"1", "SRL_CNT"},
-				{"2", "RPL_TIME"},
-				{"3", "OBS_TIME32"},
-				{"4", "OBS_TIME6"},
-				{"5", "STACK"},
-				{"7", "OBS_MODE1"},
-				{"8", "OBS_MODE2"},
-				{"9", "OBS_MODE3"},
-				{"6", "CMD_CNT"},
-				{"10", "CMD_ERR"},
-				{"48", "SEND_PCKT_CNT"},
-				{"47", "RJCT_PCKT_CNT"},
-				{"12", "BUF_STAT"},
-				{"11", "MEM_ERR"},
-				{"41", "PRAMP_SNSR_CUR"},
-				{"15", "HTR_PWR_COMM"},
-				{"20", "HTR_PWR_REAL"},
-				{"23", "HTR_SET_VAL"},
-				{"18", "HTR_MODE"},
-				{"36", "HTR_CUR"},
-				{"32", "OPT_TMP"},
-				{"34", "S_TMP"},
-				{"35", "AE_TMP"},
-				{"26", "INTEG_TRIG"},
-				{"29", "INTEG_TIME"},
-				{"27", "STK_MINMAX_OUT"},
-				{"28", "STK_VAR_OUT"},
-				{"30", "STK_INDEX"},
-				{"14", "CHP_STAT"},
-				{"31", "CHP_FREQ"},
-				{"39", "CHP_CUR"},
-				{"40", "CHP_AMP"},
-				{"13", "CHP_PWR_COMM"},
-				{"19", "CHP_PWR_REAL"},
-				{"25", "SNSR_GAIN"},
-				{"33", "SNSR_TMP"},
-				{"42", "SNSR_CH20"},
-				{"43", "SNSR_CH40"},
-				{"44", "SNSR_CH60"},
-				{"45", "SNSR_CH80"},
-				{"46", "SNSR_CH100"},
-				{"16", "RADLMP_PWR_COMM"},
-				{"21", "RADLMP_PWR_REAL"},
-				{"24", "RADLMP_GAIN"},
-				{"37", "RADLMP_CUR"},
-				{"17", "WAVLMP_PWR_COMM"},
-				{"22", "WAVLMP_PWR_REAL"},
-				{"38", "WAVLMP_CUR"}
-				};
-
-		return items[i];
+	private String[] getItem(int i) {
+		return ITEMS[i];
 	}
 
 	public static void main(String args[]) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				NIRS3QL ql = new NIRS3QL("NIRS3QL");
-				ql.setSize(1000, 640);
+				ql.setSize(1000, 700);
 				ql.setLayout(new FlowLayout());
 				ql.setLocationRelativeTo(null);
 				ql.setVisible(true);
