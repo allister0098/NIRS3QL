@@ -3,6 +3,7 @@ import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.Timer;
 import javax.swing.border.LineBorder;
+import javax.swing.border.TitledBorder;
 
 import java.io.*;
 import java.util.*;
@@ -14,6 +15,7 @@ import org.jfree.chart.plot.*;
 import org.jfree.chart.renderer.xy.*;
 import org.jfree.data.xy.*;
 import org.jfree.ui.*;
+import org.omg.PortableServer.POA;
 
 public class NIRS3QL extends JFrame implements ActionListener {
 
@@ -75,7 +77,69 @@ public class NIRS3QL extends JFrame implements ActionListener {
 			{"38", "WAVLMP_CUR"}
 	};
 
-	private List power = new ArrayList();
+	private final String[][] TRANSFER_STATUS = {
+			{"1", "SRL_CNT"},
+			{"2", "RPL_TIME"}
+	};
+
+	private final String[][] PACKET_STATUS = {
+			{"3", "OBS_TIME32"},
+			{"4", "OBS_TIME6"},
+			{"5", "STACK"}
+	};
+
+	private final String[][] STATUS_DATA = {
+			{"6", "CMD_CNT"},
+			{"7", "OBS_MODE1"},
+			{"8", "OBS_MODE2"},
+			{"9", "OBS_MODE3"},
+			{"10", "CMD_ERR"},
+			{"11", "MEM_ERR"},
+			{"12", "BUF_STAT"},
+			{"14", "CHP_STAT"},
+			{"18", "HTR_MODE"},
+			{"23", "HTR_SET_VAL"},
+			{"24", "RADLMP_GAIN"},
+			{"25", "SNSR_GAIN"},
+			{"26", "INTEG_TRIG"},
+			{"29", "INTEG_TIME"},
+			{"31", "CHP_FREQ"},
+			{"32", "OPT_TMP"},
+			{"33", "SNSR_TMP"},
+			{"36", "HTR_CUR"},
+			{"37", "RADLMP_CUR"},
+			{"38", "WAVLMP_CUR"},
+			{"39", "CHP_CUR"},
+			{"40", "CHP_AMP"},
+			{"41", "PRAMP_SNSR_CUR"},
+			{"42", "SNSR_CH20"},
+			{"43", "SNSR_CH40"},
+			{"44", "SNSR_CH60"},
+			{"45", "SNSR_CH80"},
+			{"46", "SNSR_CH100"},
+			{"48", "SEND_PCKT_CNT"},
+			{"47", "RJCT_PCKT_CNT"},
+	};
+
+	private final String[][] POWERS = {
+			{"13", "CHP_PWR_COMM"},
+			{"15", "HTR_PWR_COMM"},
+			{"16", "RADLMP_PWR_COMM"},
+			{"17", "WAVLMP_PWR_COMM"},
+			{"19", "CHP_PWR_REAL"},
+			{"20", "HTR_PWR_REAL"},
+			{"21", "RADLMP_PWR_REAL"},
+			{"22", "WAVLMP_PWR_REAL"},
+			{"27", "STK_MINMAX_OUT"},
+			{"28", "STK_VAR_OUT"},
+			{"30", "STK_INDEX"},
+			{"34", "S_TMP"},
+			{"35", "AE_TMP"},
+	};
+	private JLabel[] powerLabels = new JLabel[POWERS.length];
+	private JLabel[] transferStatusLabels = new JLabel[TRANSFER_STATUS.length];
+	private JLabel[] packetStatusLabels = new JLabel[PACKET_STATUS.length];
+	private JLabel[] statusDataLabels = new JLabel[STATUS_DATA.length];
 
 	public NIRS3QL(String title) {
 		super(title);
@@ -85,14 +149,12 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		timer = new Timer(500, this);
 		timer.setActionCommand("timer");
 
-		JMenuBar mb = createMenuBar();
-		this.setJMenuBar(mb);
+		this.setJMenuBar(createMenuBar());
 
-		JPanel lp = createLabelPanel();
-		lp.setPreferredSize(new Dimension(950, 240));
-		lp.setBorder(new LineBorder(Color.white, 2, true));
-		lp.setOpaque(false);
-		this.add(lp);
+		this.add(createLabelPanel(2, 1, TRANSFER_STATUS, transferStatusLabels, "TransferStatus", 200, 200));
+		this.add(createLabelPanel(7, 4, POWERS, powerLabels, "Powers", 500, 200));
+		this.add(createLabelPanel(3, 1, PACKET_STATUS, packetStatusLabels, "PacketStatus", 200, 200));
+		this.add(createLabelPanel(10, 6, STATUS_DATA, statusDataLabels, "StatusData", 915, 300));
 
 		double[][] series = new double[2][128];
 		for (int i = 0; i < 128; i++) {
@@ -106,13 +168,9 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		cp.setOpaque(false);
 		this.add(cp);
 
-
 		JPanel bp = createButtonPanel();
-		bp.setPreferredSize(new Dimension(950, 140));
-		bp.setOpaque(false);
 		this.add(bp);
 	}
-
 
 	public void actionPerformed(ActionEvent e) {
 		if (e.getSource() == timer) {
@@ -146,17 +204,36 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		return menuBar;
 	}
 
-	private JPanel createLabelPanel() {
+//	private JPanel createLabelPanel() {
+//		JPanel panel = new JPanel();
+//		panel.setLayout(new GridLayout(12, 6));
+//		labels = new JLabel[ITEMS.length];
+//		for (int i = 0; i < ITEMS.length; i++) {
+//			String[] item = getItem(i);
+//			labels[i] = new JLabel(item[1]);
+//			labels[i].setFont(new Font("SansSerif", Font.PLAIN, 12));
+//			labels[i].setForeground(Color.white);
+//			panel.add(labels[i]);
+//		}
+//		panel.setPreferredSize(new Dimension(950, 240));
+//		panel.setBorder(new TitledBorder(new LineBorder(Color.white, 2, true), "Params", TitledBorder.CENTER, TitledBorder.TOP, new Font("SansSerif", Font.PLAIN, 12), Color.white));
+//		panel.setOpaque(false);
+//		return panel;
+//	}
+
+	private JPanel createLabelPanel(int gridRow, int gridCol, String[][] items, JLabel[] labels, String borderName, int width, int height) {
 		JPanel panel = new JPanel();
-		panel.setLayout(new GridLayout(12, 6));
-		labels = new JLabel[ITEMS.length];
-		for (int i = 0; i < ITEMS.length; i++) {
-			String[] item = getItem(i);
+		panel.setLayout(new GridLayout(gridRow, gridCol));
+		for (int i = 0; i < items.length; i++) {
+			String[] item = getItem(items, i);
 			labels[i] = new JLabel(item[1]);
 			labels[i].setFont(new Font("SansSerif", Font.PLAIN, 12));
 			labels[i].setForeground(Color.white);
 			panel.add(labels[i]);
 		}
+		panel.setPreferredSize(new Dimension(width, height));
+		panel.setBorder(new TitledBorder(new LineBorder(Color.white, 2, true), borderName, TitledBorder.CENTER, TitledBorder.TOP, new Font("SansSerif", Font.PLAIN, 12), Color.white));
+		panel.setOpaque(false);
 		return panel;
 	}
 
@@ -205,6 +282,9 @@ public class NIRS3QL extends JFrame implements ActionListener {
 	private JPanel createButtonPanel() {
 		JPanel panel = new JPanel();
 
+		panel.setPreferredSize(new Dimension(950, 140));
+		panel.setOpaque(false);
+
 		JButton backwardButton = createControllButton("|<<");
 		JButton stopButton = createControllButton("||");
 		JButton startButton = createControllButton(">>");
@@ -251,13 +331,6 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		return jb;
 	}
 
-	private void showDialogFrame() {
-		JFrame frame = new JFrame();
-
-		frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
-		frame.setSize(200, 100);
-	}
-
 	private void readFile(File file) {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(file));
@@ -288,12 +361,11 @@ public class NIRS3QL extends JFrame implements ActionListener {
 
 	private void update() {
 		try {
-			System.out.println(id);
 			String[] data = list.get(id);
 
 			for (int i = 0; i < ITEMS.length; i++) {
-				String[] item = getItem(i);
-				labels[i].setText(String.format("%-15s%9s", item[1], data[Integer.parseInt(item[0]) - 1]));
+//				String[] item = getItem(i);
+//				labels[i].setText(String.format("%-15s%9s", item[1], data[Integer.parseInt(item[0]) - 1]));
 			}
 
 			dataset.removeSeries("s1");
@@ -322,15 +394,19 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		}
 	}
 
-	private String[] getItem(int i) {
-		return ITEMS[i];
+//	private String[] getItem(int i) {
+//		return ITEMS[i];
+//	}
+
+	private String[] getItem(String[][] items, int i) {
+		return items[i];
 	}
 
 	public static void main(String args[]) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				NIRS3QL ql = new NIRS3QL("NIRS3QL");
-				ql.setSize(1000, 700);
+				ql.setSize(1000, 1000);
 				ql.setLayout(new FlowLayout());
 				ql.setLocationRelativeTo(null);
 				ql.setVisible(true);
