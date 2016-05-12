@@ -8,6 +8,8 @@ import javax.swing.border.TitledBorder;
 import java.io.*;
 import java.util.*;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jfree.chart.*;
 import org.jfree.chart.axis.*;
@@ -20,11 +22,12 @@ import org.omg.PortableServer.POA;
 public class NIRS3QL extends JFrame implements ActionListener {
 
 	private int id = 1;
-	private ArrayList<String[]> list = new ArrayList<String[]>();
+	private ArrayList<String[]> list = new ArrayList<>();
+	private ArrayList<String> stockList = new ArrayList<>();
 	private final DefaultXYDataset dataset = new DefaultXYDataset();
-	private JLabel[] labels;
 	Timer timer;
 	private boolean isOpened;
+	private HashMap<JLabel[], String[][]> map = new HashMap<>();
 
 	private final String[][] ITEMS = {
 			{"1", "SRL_CNT"},
@@ -79,67 +82,109 @@ public class NIRS3QL extends JFrame implements ActionListener {
 
 	private final String[][] TRANSFER_STATUS = {
 			{"1", "SRL_CNT"},
-			{"2", "RPL_TIME"}
+			{"2", "RPL_TIME"},
 	};
 
 	private final String[][] PACKET_STATUS = {
 			{"3", "OBS_TIME32"},
 			{"4", "OBS_TIME6"},
-			{"5", "STACK"}
+			{"5", "STACK"},
 	};
 
-	private final String[][] STATUS_DATA = {
-			{"6", "CMD_CNT"},
+	private final String[][] OBS = {
 			{"7", "OBS_MODE1"},
 			{"8", "OBS_MODE2"},
 			{"9", "OBS_MODE3"},
-			{"10", "CMD_ERR"},
-			{"11", "MEM_ERR"},
-			{"12", "BUF_STAT"},
-			{"14", "CHP_STAT"},
-			{"18", "HTR_MODE"},
-			{"23", "HTR_SET_VAL"},
-			{"24", "RADLMP_GAIN"},
-			{"25", "SNSR_GAIN"},
-			{"26", "INTEG_TRIG"},
-			{"29", "INTEG_TIME"},
-			{"31", "CHP_FREQ"},
-			{"32", "OPT_TMP"},
-			{"33", "SNSR_TMP"},
-			{"36", "HTR_CUR"},
-			{"37", "RADLMP_CUR"},
-			{"38", "WAVLMP_CUR"},
-			{"39", "CHP_CUR"},
-			{"40", "CHP_AMP"},
-			{"41", "PRAMP_SNSR_CUR"},
-			{"42", "SNSR_CH20"},
-			{"43", "SNSR_CH40"},
-			{"44", "SNSR_CH60"},
-			{"45", "SNSR_CH80"},
-			{"46", "SNSR_CH100"},
+	};
+
+	private final String[][] CNT = {
+			{"6", "CMD_CNT"},
 			{"48", "SEND_PCKT_CNT"},
 			{"47", "RJCT_PCKT_CNT"},
 	};
 
-	private final String[][] POWERS = {
-			{"13", "CHP_PWR_COMM"},
+	private final String[][] ERR = {
+			{"10", "CMD_ERR"},
+			{"11", "MEM_ERR"},
+	};
+
+	private final String[][] HTR = {
 			{"15", "HTR_PWR_COMM"},
-			{"16", "RADLMP_PWR_COMM"},
-			{"17", "WAVLMP_PWR_COMM"},
-			{"19", "CHP_PWR_REAL"},
 			{"20", "HTR_PWR_REAL"},
-			{"21", "RADLMP_PWR_REAL"},
-			{"22", "WAVLMP_PWR_REAL"},
-			{"27", "STK_MINMAX_OUT"},
-			{"28", "STK_VAR_OUT"},
-			{"30", "STK_INDEX"},
+			{"23", "HTR_SET_VAL"},
+			{"18", "HTR_MODE"},
+			{"36", "HTR_CUR"},
+	};
+
+	private final String[][] OTHERVAL = {
+			{"12", "BUF_STAT"},
+			{"41", "PRAMP_SNSR_CUR"},
+	};
+
+	private final String[][] TMP = {
+			{"32", "OPT_TMP"},
 			{"34", "S_TMP"},
 			{"35", "AE_TMP"},
 	};
-	private JLabel[] powerLabels = new JLabel[POWERS.length];
+
+	private final String[][] INTEG = {
+			{"26", "INTEG_TRIG"},
+			{"29", "INTEG_TIME"},
+	};
+
+	private final String[][] STK = {
+			{"27", "STK_MINMAX_OUT"},
+			{"28", "STK_VAR_OUT"},
+			{"30", "STK_INDEX"},
+	};
+
+	private final String[][] CHP = {
+		{"14", "CHP_STAT"},
+		{"31", "CHP_FREQ"},
+		{"39", "CHP_CUR"},
+		{"40", "CHP_AMP"},
+		{"13", "CHP_PWR_COMM"},
+		{"19", "CHP_PWR_REAL"},
+	};
+
+	private final String[][] SNSR = {
+		{"25", "SNSR_GAIN"},
+		{"33", "SNSR_TMP"},
+		{"42", "SNSR_CH20"},
+		{"43", "SNSR_CH40"},
+		{"44", "SNSR_CH60"},
+		{"45", "SNSR_CH80"},
+		{"46", "SNSR_CH100"},
+	};
+
+	private final String[][] RADLMP = {
+			{"16", "RADLMP_PWR_COMM"},
+			{"21", "RADLMP_PWR_REAL"},
+			{"24", "RADLMP_GAIN"},
+			{"37", "RADLMP_CUR"},
+	};
+
+	private final String[][] WAVLMP = {
+			{"17", "WAVLMP_PWR_COMM"},
+			{"22", "WAVLMP_PWR_REAL"},
+			{"38", "WAVLMP_CUR"}
+	};
+
 	private JLabel[] transferStatusLabels = new JLabel[TRANSFER_STATUS.length];
 	private JLabel[] packetStatusLabels = new JLabel[PACKET_STATUS.length];
-	private JLabel[] statusDataLabels = new JLabel[STATUS_DATA.length];
+	private JLabel[] obsLabels = new JLabel[OBS.length];
+	private JLabel[] cntLabels = new JLabel[CNT.length];
+	private JLabel[] errLabels = new JLabel[ERR.length];
+	private JLabel[] htrLabels = new JLabel[HTR.length];
+	private JLabel[] otherLabels = new JLabel[OTHERVAL.length];
+	private JLabel[] tmpLabels = new JLabel[TMP.length];
+	private JLabel[] integLabels = new JLabel[INTEG.length];
+	private JLabel[] stkLabels = new JLabel[STK.length];
+	private JLabel[] chpLabels = new JLabel[CHP.length];
+	private JLabel[] snsrLabels = new JLabel[SNSR.length];
+	private JLabel[] radlmpLabels = new JLabel[RADLMP.length];
+	private JLabel[] wavlmpLabels = new JLabel[WAVLMP.length];
+
 
 	public NIRS3QL(String title) {
 		super(title);
@@ -151,10 +196,7 @@ public class NIRS3QL extends JFrame implements ActionListener {
 
 		this.setJMenuBar(createMenuBar());
 
-		this.add(createLabelPanel(2, 1, TRANSFER_STATUS, transferStatusLabels, "TransferStatus", 200, 200));
-		this.add(createLabelPanel(7, 4, POWERS, powerLabels, "Powers", 500, 200));
-		this.add(createLabelPanel(3, 1, PACKET_STATUS, packetStatusLabels, "PacketStatus", 200, 200));
-		this.add(createLabelPanel(10, 6, STATUS_DATA, statusDataLabels, "StatusData", 915, 300));
+		setLabels();
 
 		double[][] series = new double[2][128];
 		for (int i = 0; i < 128; i++) {
@@ -203,23 +245,6 @@ public class NIRS3QL extends JFrame implements ActionListener {
 
 		return menuBar;
 	}
-
-//	private JPanel createLabelPanel() {
-//		JPanel panel = new JPanel();
-//		panel.setLayout(new GridLayout(12, 6));
-//		labels = new JLabel[ITEMS.length];
-//		for (int i = 0; i < ITEMS.length; i++) {
-//			String[] item = getItem(i);
-//			labels[i] = new JLabel(item[1]);
-//			labels[i].setFont(new Font("SansSerif", Font.PLAIN, 12));
-//			labels[i].setForeground(Color.white);
-//			panel.add(labels[i]);
-//		}
-//		panel.setPreferredSize(new Dimension(950, 240));
-//		panel.setBorder(new TitledBorder(new LineBorder(Color.white, 2, true), "Params", TitledBorder.CENTER, TitledBorder.TOP, new Font("SansSerif", Font.PLAIN, 12), Color.white));
-//		panel.setOpaque(false);
-//		return panel;
-//	}
 
 	private JPanel createLabelPanel(int gridRow, int gridCol, String[][] items, JLabel[] labels, String borderName, int width, int height) {
 		JPanel panel = new JPanel();
@@ -334,7 +359,7 @@ public class NIRS3QL extends JFrame implements ActionListener {
 	private void readFile(File file) {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(file));
-			String line = null;
+			String line;
 			while ((line = br.readLine()) != null) {
 				String[] arrayLine = line.split(",");
 				list.add(arrayLine);
@@ -361,11 +386,39 @@ public class NIRS3QL extends JFrame implements ActionListener {
 
 	private void update() {
 		try {
+			Pattern intPattern = Pattern.compile("^-*[0-9]+$");
+			Pattern doublePattern = Pattern.compile("^-*[0-9]+[.][0-9]*$");
+			Pattern alphaPattern = Pattern.compile("^[A-Z]+_*[A-Z]*$");
 			String[] data = list.get(id);
 
-			for (int i = 0; i < ITEMS.length; i++) {
-//				String[] item = getItem(i);
-//				labels[i].setText(String.format("%-15s%9s", item[1], data[Integer.parseInt(item[0]) - 1]));
+			stockList.clear();
+
+			for(Map.Entry<JLabel[], String[][]> iter : map.entrySet()) {
+				for (int i = 0; i < iter.getValue().length; i++) {
+					String[] item = getItem(iter.getValue(), i);
+					String content = data[Integer.parseInt(item[0]) - 1];
+					iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
+					if (stockList.size() == iter.getValue().length) {
+
+					}
+//					if (stockList.isEmpty()) {
+//						iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
+//					} else {
+//						if (intPattern.matcher(content).find()) {
+//							iter.getKey()[i].setText(String.format("%-15s%9s%9s", item[1], content, Integer.parseInt(content) > Integer.parseInt(stockList.get(i)) ? "△" : "▽"));
+//						} else if (doublePattern.matcher(content).find()) {
+//							iter.getKey()[i].setText(String.format("%-15s%9s%9s", item[1], content, Float.parseFloat(content) > Float.parseFloat(stockList.get(i)) ? "△" : "▽"));
+//						} else if (alphaPattern.matcher(content).find()) {
+//							if (content.equals("ON") || content.equals("OFF")) {
+//								iter.getKey()[i].setText(String.format("%-15s%9s%9s", item[1], content, content.equals("ON") ? "OFF" : "ON"));
+//							} else {
+//								iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
+//							}
+//						}
+//						stockList.clear();
+//					}
+//					stockList.add(content);
+				}
 			}
 
 			dataset.removeSeries("s1");
@@ -394,19 +447,50 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		}
 	}
 
-//	private String[] getItem(int i) {
-//		return ITEMS[i];
-//	}
-
 	private String[] getItem(String[][] items, int i) {
 		return items[i];
+	}
+
+	private void setLabels() {
+		setMaps();
+		this.add(createLabelPanel(2, 1, TRANSFER_STATUS, transferStatusLabels, "TransferStatus", 225, 100));
+		this.add(createLabelPanel(3, 1, PACKET_STATUS, packetStatusLabels, "PacketStatus", 225, 100));
+		this.add(createLabelPanel(3, 1, OBS, obsLabels, "Obs", 225, 100));
+		this.add(createLabelPanel(3, 1, CNT, cntLabels, "CNT", 225, 100));
+		this.add(createLabelPanel(2, 1, ERR, errLabels, "ERR", 225, 100));
+		this.add(createLabelPanel(3, 1, WAVLMP, wavlmpLabels, "WAVLMP", 225, 100));
+		this.add(createLabelPanel(2, 1, OTHERVAL, otherLabels, "OTHER VALUE", 225, 100));
+		this.add(createLabelPanel(3, 1, TMP, tmpLabels, "TMP", 225, 100));
+		this.add(createLabelPanel(2, 1, INTEG, integLabels, "INTEGRATION", 225, 100));
+		this.add(createLabelPanel(3, 1, STK, stkLabels, "STK", 225, 100));
+		this.add(createLabelPanel(6, 1, CHP, chpLabels, "CHP", 250, 200));
+		this.add(createLabelPanel(7, 1, SNSR, snsrLabels, "SNSR", 250, 200));
+		this.add(createLabelPanel(4, 1, RADLMP, radlmpLabels, "RADLMP", 250, 200));
+		this.add(createLabelPanel(5, 1, HTR, htrLabels, "HTR", 250, 200));
+	}
+
+	private void setMaps() {
+		map.put(transferStatusLabels, TRANSFER_STATUS);
+		map.put(packetStatusLabels, PACKET_STATUS);
+		map.put(obsLabels, OBS);
+		map.put(cntLabels, CNT);
+		map.put(errLabels, ERR);
+		map.put(htrLabels, HTR);
+		map.put(otherLabels, OTHERVAL);
+		map.put(tmpLabels, TMP);
+		map.put(integLabels, INTEG);
+		map.put(stkLabels, STK);
+		map.put(chpLabels, CHP);
+		map.put(snsrLabels, SNSR);
+		map.put(radlmpLabels, RADLMP);
+		map.put(wavlmpLabels, WAVLMP);
 	}
 
 	public static void main(String args[]) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				NIRS3QL ql = new NIRS3QL("NIRS3QL");
-				ql.setSize(1000, 1000);
+				ql.setSize(1200, 1100);
 				ql.setLayout(new FlowLayout());
 				ql.setLocationRelativeTo(null);
 				ql.setVisible(true);
