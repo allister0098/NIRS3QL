@@ -29,56 +29,6 @@ public class NIRS3QL extends JFrame implements ActionListener {
 	private boolean isOpened;
 	private HashMap<JLabel[], String[][]> map = new HashMap<>();
 
-	private final String[][] ITEMS = {
-			{"1", "SRL_CNT"},
-			{"2", "RPL_TIME"},
-			{"3", "OBS_TIME32"},
-			{"4", "OBS_TIME6"},
-			{"5", "STACK"},
-			{"7", "OBS_MODE1"},
-			{"8", "OBS_MODE2"},
-			{"9", "OBS_MODE3"},
-			{"6", "CMD_CNT"},
-			{"10", "CMD_ERR"},
-			{"48", "SEND_PCKT_CNT"},
-			{"47", "RJCT_PCKT_CNT"},
-			{"12", "BUF_STAT"},
-			{"11", "MEM_ERR"},
-			{"41", "PRAMP_SNSR_CUR"},
-			{"15", "HTR_PWR_COMM"},
-			{"20", "HTR_PWR_REAL"},
-			{"23", "HTR_SET_VAL"},
-			{"18", "HTR_MODE"},
-			{"36", "HTR_CUR"},
-			{"32", "OPT_TMP"},
-			{"34", "S_TMP"},
-			{"35", "AE_TMP"},
-			{"26", "INTEG_TRIG"},
-			{"29", "INTEG_TIME"},
-			{"27", "STK_MINMAX_OUT"},
-			{"28", "STK_VAR_OUT"},
-			{"30", "STK_INDEX"},
-			{"14", "CHP_STAT"},
-			{"31", "CHP_FREQ"},
-			{"39", "CHP_CUR"},
-			{"40", "CHP_AMP"},
-			{"13", "CHP_PWR_COMM"},
-			{"19", "CHP_PWR_REAL"},
-			{"25", "SNSR_GAIN"},
-			{"33", "SNSR_TMP"},
-			{"42", "SNSR_CH20"},
-			{"43", "SNSR_CH40"},
-			{"44", "SNSR_CH60"},
-			{"45", "SNSR_CH80"},
-			{"46", "SNSR_CH100"},
-			{"16", "RADLMP_PWR_COMM"},
-			{"21", "RADLMP_PWR_REAL"},
-			{"24", "RADLMP_GAIN"},
-			{"37", "RADLMP_CUR"},
-			{"17", "WAVLMP_PWR_COMM"},
-			{"22", "WAVLMP_PWR_REAL"},
-			{"38", "WAVLMP_CUR"}
-	};
 
 	private final String[][] TRANSFER_STATUS = {
 			{"1", "SRL_CNT"},
@@ -170,6 +120,10 @@ public class NIRS3QL extends JFrame implements ActionListener {
 			{"38", "WAVLMP_CUR"}
 	};
 
+	private final int ITEMS_SIZE = TRANSFER_STATUS.length + PACKET_STATUS.length + OBS.length + CNT.length + ERR.length +
+			HTR.length + OTHERVAL.length + TMP.length + INTEG.length + STK.length + CHP.length + SNSR.length + RADLMP.length
+			+ WAVLMP.length;
+
 	private JLabel[] transferStatusLabels = new JLabel[TRANSFER_STATUS.length];
 	private JLabel[] packetStatusLabels = new JLabel[PACKET_STATUS.length];
 	private JLabel[] obsLabels = new JLabel[OBS.length];
@@ -229,6 +183,7 @@ public class NIRS3QL extends JFrame implements ActionListener {
 
 		JMenuItem menuOpen = new JMenuItem("Open File");
 		menuFile.add(menuOpen);
+		menuOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK));
 		menuOpen.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				openFile();
@@ -237,6 +192,7 @@ public class NIRS3QL extends JFrame implements ActionListener {
 
 		JMenuItem menuClose = new JMenuItem("Close");
 		menuFile.add(menuClose);
+		menuClose.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, KeyEvent.CTRL_DOWN_MASK));
 		menuClose.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				System.exit(0);
@@ -386,46 +342,75 @@ public class NIRS3QL extends JFrame implements ActionListener {
 
 	private void update() {
 		try {
+			int cnt = 0;
 			Pattern intPattern = Pattern.compile("^-*[0-9]+$");
 			Pattern doublePattern = Pattern.compile("^-*[0-9]+[.][0-9]*$");
-			Pattern alphaPattern = Pattern.compile("^[A-Z]+_*[A-Z]*$");
+//			Pattern alphaPattern = Pattern.compile("^[A-Z]+_*[A-Z]*$");
+
 			String[] data = list.get(id);
 
-			stockList.clear();
+			for (Map.Entry<JLabel[], String[][]> iter : map.entrySet()) {
 
-			for(Map.Entry<JLabel[], String[][]> iter : map.entrySet()) {
 				for (int i = 0; i < iter.getValue().length; i++) {
 					String[] item = getItem(iter.getValue(), i);
-					String content = data[Integer.parseInt(item[0]) - 1];
+					String content = data[Integer.parseInt(item[0]) - 1].trim();
 					iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
-					if (stockList.size() == iter.getValue().length) {
 
+					if (stockList.size() == cnt) {
+						iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
+					} else {
+						if (intPattern.matcher(content).find()) {
+							int before = Integer.parseInt(stockList.get(cnt));
+							if (Integer.parseInt(content) > before) {
+								iter.getKey()[i].setForeground(new Color(70, 155, 186));
+								iter.getKey()[i].setText(String.format("%-15s%9s%9s", item[1], content, "△"));
+							} else if (Integer.parseInt(content) < before){
+								iter.getKey()[i].setForeground(Color.RED);
+								iter.getKey()[i].setText(String.format("%-15s%9s%9s", item[1], content, "▽"));
+							} else {
+								iter.getKey()[i].setForeground(Color.WHITE);
+								iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
+							}
+						} else if (doublePattern.matcher(content).find()) {
+							float before = Float.parseFloat(stockList.get(cnt));
+							if (Float.parseFloat(content) > before) {
+								iter.getKey()[i].setForeground(new Color(70, 155, 186));
+								iter.getKey()[i].setText(String.format("%-15s%9s%9s", item[1], content, "△"));
+							} else if (Float.parseFloat(content) < before) {
+								iter.getKey()[i].setForeground(Color.RED);
+								iter.getKey()[i].setText(String.format("%-15s%9s%9s", item[1], content, "▽"));
+							} else {
+								iter.getKey()[i].setForeground(Color.WHITE);
+								iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
+							}
+						} else {
+							iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
+						}
 					}
-//					if (stockList.isEmpty()) {
-//						iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
-//					} else {
-//						if (intPattern.matcher(content).find()) {
-//							iter.getKey()[i].setText(String.format("%-15s%9s%9s", item[1], content, Integer.parseInt(content) > Integer.parseInt(stockList.get(i)) ? "△" : "▽"));
-//						} else if (doublePattern.matcher(content).find()) {
-//							iter.getKey()[i].setText(String.format("%-15s%9s%9s", item[1], content, Float.parseFloat(content) > Float.parseFloat(stockList.get(i)) ? "△" : "▽"));
-//						} else if (alphaPattern.matcher(content).find()) {
-//							if (content.equals("ON") || content.equals("OFF")) {
-//								iter.getKey()[i].setText(String.format("%-15s%9s%9s", item[1], content, content.equals("ON") ? "OFF" : "ON"));
-//							} else {
-//								iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
-//							}
-//						}
-//						stockList.clear();
-//					}
-//					stockList.add(content);
+
+					if (content.equals("ON")) {
+						iter.getKey()[i].setForeground(Color.RED);
+						iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
+					} else if (content.equals("OFF")) {
+						iter.getKey()[i].setForeground(new Color(70, 155, 186));
+						iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
+					}
+
+					try {
+						stockList.set(cnt, content);
+					} catch (IndexOutOfBoundsException e) {
+						stockList.add(content);
+					}
+					cnt++;
 				}
+
 			}
 
 			dataset.removeSeries("s1");
 			double[][] series = new double[2][128];
 			for (int i = 0; i < 128; i++) {
 				double x = i + 1.0;
-				double y = Double.parseDouble(data[i + ITEMS.length].trim());
+				double y = Double.parseDouble(data[i + ITEMS_SIZE].trim());
 				if (y > 60000)
 					y -= 65536;
 				series[0][i] = x;
@@ -498,3 +483,4 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		});
 	}
 }
+
