@@ -354,7 +354,7 @@ public class NIRS3QL extends JFrame implements ActionListener {
 				for (int i = 0; i < iter.getValue().length; i++) {
 					String[] item = getItem(iter.getValue(), i);
 					String content = data[Integer.parseInt(item[0]) - 1].trim();
-					iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
+//					iter.getKey()[i].setText(String.format("%-15s%-9s", item[1], content));
 
 					if (stockList.size() == cnt) {
 						iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
@@ -384,7 +384,7 @@ public class NIRS3QL extends JFrame implements ActionListener {
 								iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
 							}
 						} else {
-							iter.getKey()[i].setText(String.format("%-15s%9s", item[1], content));
+							iter.getKey()[i].setText(String.format("%-15s%-9s", item[1], content));
 						}
 					}
 
@@ -475,7 +475,7 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				NIRS3QL ql = new NIRS3QL("NIRS3QL");
-				ql.setSize(1200, 1100);
+				ql.setSize(1200, 850);
 				ql.setLayout(new FlowLayout());
 				ql.setLocationRelativeTo(null);
 				ql.setVisible(true);
