@@ -438,9 +438,9 @@ public class NIRS3QL extends JFrame implements ActionListener {
 
 	private void setLabels() {
 		setMaps();
-		this.add(createLabelPanel(2, 1, TRANSFER_STATUS, transferStatusLabels, "TransferStatus", 225, 100));
-		this.add(createLabelPanel(3, 1, PACKET_STATUS, packetStatusLabels, "PacketStatus", 225, 100));
-		this.add(createLabelPanel(3, 1, OBS, obsLabels, "Obs", 225, 100));
+		this.add(createLabelPanel(2, 1, TRANSFER_STATUS, transferStatusLabels, "TRANSFER STATUS", 225, 100));
+		this.add(createLabelPanel(3, 1, PACKET_STATUS, packetStatusLabels, "PACKET STATUS", 225, 100));
+		this.add(createLabelPanel(3, 1, OBS, obsLabels, "OBS", 225, 100));
 		this.add(createLabelPanel(3, 1, CNT, cntLabels, "CNT", 225, 100));
 		this.add(createLabelPanel(2, 1, ERR, errLabels, "ERR", 225, 100));
 		this.add(createLabelPanel(3, 1, WAVLMP, wavlmpLabels, "WAVLMP", 225, 100));
@@ -483,4 +483,3 @@ public class NIRS3QL extends JFrame implements ActionListener {
 		});
 	}
 }
-
